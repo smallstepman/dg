@@ -13,6 +13,7 @@ pub mod import;
 pub mod init;
 pub mod lint;
 pub mod list;
+pub mod managed;
 pub mod new;
 pub mod opencode;
 pub mod refs;
@@ -48,7 +49,12 @@ pub enum Command {
         /// Generate .github/dependabot.yml (and nix update workflow) without prompting
         #[arg(long)]
         dependabot: bool,
+        /// Make schema-managed documents read-only and writable through dg.
+        #[arg(long)]
+        managed: bool,
     },
+    /// Manage schema-managed document permissions.
+    Managed(managed::ManagedArgs),
     /// Create a new document
     New(new::NewArgs),
     /// Delete a document

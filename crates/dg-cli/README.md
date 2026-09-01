@@ -15,6 +15,7 @@ cargo install --path crates/dg-cli
 ```bash
 dg init                    # Initialize a dg project
 dg init --with-claude      # Include Claude Code integration
+dg init --managed         # Make schema-managed docs read-only
 ```
 
 ### Document Management
@@ -38,6 +39,13 @@ Executable `.dg/hooks/on_create`, `.dg/hooks/on_update`, and
 `<document-id> <event-type>` arguments and document JSON on stdin. Update
 payloads contain `before`, `after`, and a structured `diff`. Hook failures
 only emit warnings.
+
+### Managed Mode
+
+`dg init --managed` or `dg managed on` removes write permission from
+schema-managed document folders and singleton files. Mutating `dg` commands
+temporarily restore owner write access, then reapply read-only permissions.
+Use `dg managed off` to restore owner write access.
 
 ### Validation
 

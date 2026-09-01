@@ -61,6 +61,7 @@ CI fails if `Cargo.lock`, `ui/bun.lock`, or `ui/bun.nix` drift out of sync.
 
 ```bash
 dg init                              # Scaffold project + git hooks + AI agent config
+dg init --managed                   # Make schema-managed docs read-only
 dg new opportunity "Sell llama milk online"                  # OPP-001
 dg new adr "Use Rails with PostgreSQL" enables OPP-001       # ADR-001
 dg new spec "Llama milk checkout flow" implements OPP-001    # SPEC-001
@@ -183,6 +184,9 @@ dg fmt                               # Auto-format documents to schema order
 dg renumber                          # Reorder document IDs chronologically
 dg coverage                          # Coverage metrics by type/status
 dg team list                         # Show orgs, teams, users
+dg managed status                   # Show managed mode state
+dg managed on                       # Enforce read-only schema-managed docs
+dg managed off                      # Restore owner write access
 ```
 
 ## External document hooks
@@ -197,6 +201,18 @@ Update hooks receive an object containing `before`, `after`, and `diff`, where
 `diff` uses the same `field_changes` and `section_changes` structure as
 `dg diff`. Hook failures are reported as warnings and do not roll back or
 fail the document mutation.
+
+## Managed mode
+
+`dg init --managed` or `dg managed on` protects schema-managed document
+folders and singleton files by removing write permission. Mutating commands
+temporarily unlock those paths, perform the mutation, run document hooks, and
+restore read-only permissions. This keeps direct edits out of the document
+tree while preserving `dg new`, `dg set`, `dg delete`, formatting, renumbering,
+team-document, generation, and import workflows.
+
+The mode is stored as `managed = true` in `.dg/config.toml`. The configuration
+file and hook scripts remain writable so mode changes and notifications work.
 
 ## Field assignment rules
 
@@ -237,7 +253,14 @@ supersedes: ADR-002
 
 ## Configuration files
 
-`dg init` creates a `.dg/` directory with two KDL configuration files.
+`dg init` creates a `.dg/` directory with KDL schema and organization
+configuration files. `dg init --managed` also writes `.dg/config.toml` with
+`managed = true`.
+
+### `.dg/config.toml` — Project settings
+
+`managed = true` enables the managed-mode permission boundary. Omitted or
+`false` leaves normal filesystem permissions unchanged.
 
 ### `.dg/schema.kdl` — Document schema
 
@@ -398,6 +421,7 @@ dg init --with-gemini      # Force Gemini CLI setup (AGENTS.md + .gemini/skills/
 dg init --with-opencode    # Force OpenCode setup   (AGENTS.md + .opencode/skills/)
 dg init --eject            # Export all templates to .dg/templates/ for customization
 dg init --dependabot       # Generate .github/dependabot.yml + devenv update workflow
+dg init --managed            # Make schema-managed documents read-only
 ```
 
 Skills installed cover: opportunity, ADR, policy, incident, spec, diagram, team, image, Mermaid flowchart, Mermaid sequence.
@@ -411,6 +435,7 @@ After `dg init`:
 ```
 .dg/
   org.kdl          # Team/user registry
+  config.toml       # Project settings (created by managed mode or config)
   schema.kdl       # Custom schema (only if ejected with dg init --eject)
 docs/
   architecture/    # ADR-001.md, ADR-002.md, ...

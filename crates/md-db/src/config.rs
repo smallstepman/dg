@@ -10,6 +10,10 @@ use std::path::Path;
 #[serde(rename_all = "kebab-case")]
 #[derive(Default)]
 pub struct Config {
+    /// Whether schema-managed documents are writable only through `dg`.
+    #[serde(default)]
+    pub managed: bool,
+
     /// Commit hook settings
     #[serde(default)]
     pub commit_hooks: CommitHooksConfig,
@@ -122,6 +126,13 @@ impl Config {
         toml::to_string_pretty(&config)
             .unwrap_or_else(|_| String::from("# Error generating config"))
     }
+
+    /// Save configuration to `.dg/config.toml`, creating the directory if needed.
+    pub fn save(&self, dg_root: &Path) -> std::io::Result<()> {
+        std::fs::create_dir_all(dg_root)?;
+        let content = toml::to_string_pretty(self).map_err(std::io::Error::other)?;
+        std::fs::write(dg_root.join("config.toml"), content)
+    }
 }
 
 #[cfg(test)]
@@ -131,6 +142,7 @@ mod tests {
     #[test]
     fn test_default_config() {
         let config = Config::default();
+        assert!(!config.managed);
         assert!(config.commit_hooks.enabled);
         assert_eq!(config.commit_hooks.local_mode, "warn");
         assert_eq!(config.commit_hooks.recommend_refs_for.len(), 3);
@@ -140,6 +152,8 @@ mod tests {
     #[test]
     fn test_parse_config_toml() {
         let toml_str = r#"
+managed = true
+
 [commit-hooks]
 enabled = true
 local-mode = "warn"
@@ -148,6 +162,7 @@ auto-suggest = false
 "#;
 
         let config: Config = toml::from_str(toml_str).unwrap();
+        assert!(config.managed);
         assert!(config.commit_hooks.enabled);
         assert_eq!(config.commit_hooks.local_mode, "warn");
         assert_eq!(config.commit_hooks.recommend_refs_for, vec!["feat", "fix"]);
@@ -157,6 +172,7 @@ auto-suggest = false
     #[test]
     fn test_default_toml_generation() {
         let toml_str = Config::default_toml();
+        assert!(toml_str.contains("managed"));
         assert!(toml_str.contains("commit-hooks"));
         assert!(toml_str.contains("enabled"));
         assert!(toml_str.contains("local-mode"));
