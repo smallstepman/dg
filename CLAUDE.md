@@ -95,7 +95,7 @@ The site is a SvelteKit SPA (`ui/`, Svelte 5, adapter-static, `ssr = false`) emb
 3. Dispatch to command handler
 4. Save cache if dirty
 
-**Commands:** init, new, list, show, refs, validate, suggest, coverage, fmt, lint, guide, claude, gemini, opencode, hooks, export, site, set, renumber, team, roadmap
+**Commands:** init, new, delete, list, show, refs, validate, suggest, coverage, fmt, lint, guide, claude, gemini, opencode, hooks, export, site, set, renumber, team, roadmap
 
 ### Changing MCP server tools
 
