@@ -92,10 +92,12 @@ The site is a SvelteKit SPA (`ui/`, Svelte 5, adapter-static, `ssr = false`) emb
 **`main.rs` flow:**
 1. Parse CLI → find `.dg/` root → load schema (explicit → `.dg/schema.kdl` → built-in) → load `org.kdl` → load cache
 2. Early-return commands (no project root needed): `init`, `guide`, `claude`, `gemini`, `opencode`, `hooks`
-3. Dispatch to command handler; notify document hooks after mutations
+3. Dispatch to command handler; managed mode unlocks schema-managed paths for
+   mutating commands and restores read-only permissions afterward; notify
+   document hooks after mutations
 4. Save cache if dirty
 
-**Commands:** init, new, delete, list, show, refs, validate, suggest, coverage, fmt, lint, guide, claude, gemini, opencode, hooks, export, site, set, renumber, team, roadmap
+**Commands:** init, managed, new, delete, list, show, refs, validate, suggest, coverage, fmt, lint, guide, claude, gemini, opencode, hooks, export, site, set, renumber, team, roadmap
 
 ### Changing MCP server tools
 

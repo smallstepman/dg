@@ -59,6 +59,7 @@ fn run() -> Result<()> {
             with_opencode,
             eject,
             dependabot,
+            managed,
         } => {
             let root = cli.root.unwrap_or_else(|| PathBuf::from("."));
             return commands::init::run(
@@ -68,6 +69,7 @@ fn run() -> Result<()> {
                 *with_opencode,
                 *eject,
                 *dependabot,
+                *managed,
             );
         }
         Command::Guide(args) => {
@@ -140,7 +142,21 @@ fn run() -> Result<()> {
     let mut cache =
         md_db::cache::DocCache::load(&cache_path).unwrap_or_else(|_| md_db::cache::DocCache::new());
 
-    let document_snapshot = if document_hooks::command_may_change_documents(&cli.command) {
+    let managed_mode = md_db::config::Config::load(&root.join(".dg")).managed;
+    if managed_mode {
+        commands::managed::set_schema_paths_readonly(&root, &schema, true)
+            .context("failed to enforce managed mode permissions")?;
+    }
+
+    let changes_documents = document_hooks::command_may_change_documents(&cli.command);
+    if managed_mode && changes_documents {
+        if let Err(error) = commands::managed::set_schema_paths_readonly(&root, &schema, false) {
+            let _ = commands::managed::set_schema_paths_readonly(&root, &schema, true);
+            return Err(error).context("failed to make managed documents writable");
+        }
+    }
+
+    let document_snapshot = if changes_documents {
         match document_hooks::capture(&root) {
             Ok(snapshot) => Some(snapshot),
             Err(error) => {
@@ -161,6 +177,7 @@ fn run() -> Result<()> {
         | Command::Hooks(_) => {
             unreachable!("handled above")
         }
+        Command::Managed(args) => commands::managed::run(&root, &schema, &args),
         Command::Export(args) => {
             commands::export::run(&root, &schema, users.as_ref(), &args, &mut cache)
         }
@@ -201,6 +218,18 @@ fn run() -> Result<()> {
                 eprintln!("warning: failed to snapshot documents after mutation: {error}");
             }
         }
+    }
+
+    let permission_result = if managed_mode && changes_documents {
+        commands::managed::set_schema_paths_readonly(&root, &schema, true)
+    } else {
+        Ok(())
+    };
+    if let Err(error) = permission_result {
+        if result.is_ok() {
+            return Err(error).context("failed to restore managed mode permissions");
+        }
+        eprintln!("warning: failed to restore managed mode permissions: {error:#}");
     }
 
     // Save cache if modified

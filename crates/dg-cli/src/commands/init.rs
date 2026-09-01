@@ -69,6 +69,46 @@ pub fn run(
     with_opencode: bool,
     eject: bool,
     dependabot: bool,
+    managed: bool,
+) -> Result<()> {
+    if managed && eject {
+        anyhow::bail!("--managed cannot be combined with --eject");
+    }
+
+    let existing_managed = md_db::config::Config::load(&root.join(".dg")).managed;
+    let schema = if existing_managed {
+        Some(crate::commands::managed::load_schema(root)?)
+    } else {
+        None
+    };
+    let _write_guard = schema
+        .as_ref()
+        .map(|schema| crate::commands::managed::ManagedWriteGuard::new(root, schema))
+        .transpose()?;
+
+    run_inner(
+        root,
+        with_claude,
+        with_gemini,
+        with_opencode,
+        eject,
+        dependabot,
+    )?;
+
+    if managed {
+        let schema = crate::commands::managed::load_schema(root)?;
+        crate::commands::managed::enable(root, &schema)?;
+    }
+    Ok(())
+}
+
+fn run_inner(
+    root: &Path,
+    with_claude: bool,
+    with_gemini: bool,
+    with_opencode: bool,
+    eject: bool,
+    dependabot: bool,
 ) -> Result<()> {
     let dg_dir = root.join(".dg");
     let dg_exists = dg_dir.is_dir();
